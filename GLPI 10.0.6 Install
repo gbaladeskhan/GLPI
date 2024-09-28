@@ -1,0 +1,229 @@
+GLPI 10.0.6 intallation
+
+Step 1 : Mise à jour Service 
+#apt update -y && apt list -u
+
+Step 2 : Installation et configuration Mariadb
+#apt install mariadb-server
+#mysql_secure_installation
+
+Step: Création et configuration de la base de donnée
+#mysql -u root -p
+
+(Consulter les bases de données : show databases;)
+
+>create database glpi;
+>create user 'glpi'@'localhost' identified by 'glpi@Password2024';
+>grant all privileges on glpi.* to 'glpi'@'localhost' with grant option;
+>ALTER USER 'glpi'@'localhost' IDENTIFIED WITH mysql_native_password BY 'glpi@Password2024'; 
+update user password
+>flush privileges;
+>exit;
+
+
+Step 3: Installation et configuration Apache2 & PHP
+
+#apt install -y software-properties-common
+#add-apt-repository ppa:ondrej/php
+#apt update && upgrade
+
+ installation Apache2
+#apt -y install apache2
+
+#apt update
+#apt install php8.2 php8.2-cli php8.2-{bz2,curl,mbstring,intl}
+#apt install php8.2-fpm
+#a2enconf php8.2-fpm
+
+
+#apt install php8.2 libapache2-mod-php8.2
+#apt install php8.2-common php8.2-gmp php8.2-curl php8.2-intl
+#apt install php8.2-mbstring php8.2-xmlrpc php8.2-mysql
+#apt install php8.2-gd php8.2-imap php8.2-ldap 
+#apt install php-cas php8.2-bcmath php8.2-xml php8.2-cli php8.2-zip php8.2-sqlite3
+#apt install php-xml
+
+#systemctl restart apache2
+
+Update php.ini
+#nano /etc/php/8.2/apache2/php.ini
+-----
+memory_limit = 512M
+date.timezone = UTC
+upload_max_filesize = 16M
+max_execution_time = 360
+max_input_vars = 1500
+session.cookie_httponly = on
+
+--
+file_uploads = On
+allow_url_fopen = On
+short_open_tag = On
+memory_limit = 512M
+upload_max_filesize = 100M
+max_execution_time = 360
+max_input_vars = 1500
+date.timezone = Europe/Paris
+--
+
+#systemctl restart apache2
+
+Step 4: GLPI Installation
+
+
+cd /var/www/
+#wget https://github.com/glpi-project/glpi/releases/download/10.0.6/glpi-10.0.6.tgz
+
+#tar -xf glpi-10.0.6.tgz
+#mv glpi/ /var/www/html/
+
+#chmod 755 /var/www/html/glpi/*
+#chown www-data:www-data -R /var/www/html/glpi/*
+
+ Configure apache2 
+#nano /etc/apache2/sites-available/glpi.conf
+
+<VirtualHost *:80>
+ServerAdmin admin@example.com
+DocumentRoot /var/www/html/glpi
+ServerName example.com
+ServerAlias www.example.com
+<Directory /var/www/html/glpi>
+Options +FollowSymlinks
+AllowOverride All
+Require all granted
+</Directory>
+ErrorLog ${APACHE_LOG_DIR}/error.log
+CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
+
+Enable GLPI and Rewrite Module
+
+#a2ensite glpi.conf
+#a2enmod rewrite
+#systemctl restart apache2.service
+
+
+Step : Configure GLPI 
+http://localhost ( @ip du server glpi)
+   configuration de la baase de donnée
+serveur: localhost
+user: glpi (userdatabase)
+passwoard: password database
+*********************************************************************************
+*Les identifiants et mots de passe par défaut sont :                            *
+*                                                                               *
+*glpi/glpi pour le compte administrateur
+*tech/tech pour le compte technicien
+*normal/normal pour le compte normal
+*post-only/postonly pour le compte postonly
+*Vous pouvez supprimer ou modifier ces comptes ainsi que les données initiales.
+*********************************************************************************
+
+glpi/glpi
+
+-------------------------
+
+Step 5: Install FusionInventory
+
+Step :
+#rm -rf /var/www/html/glpi/install/install.php
+
+
+Step: install Fusion inventory
+
+# apt-get update && apt-get upgrade
+
+# cd /usr/src
+#wget https://github.com/fusioninventory/fusioninventory-for-glpi/releases/download/glpi10.0.6%2B1.1/fusioninventory-10.0.6+1.1.tar.bz2
+#tar -xvf fusioninventory-10.0.6+1.1.tar.bz2 -C /var/www/html/glpi/plugins 
+# chown -R www-data /var/www/html/glpi/plugins
+# cd /var/www/html/glpi/plugins
+check if  "/ fusioninventory/" is there. else, rename file to  "/ fusioninventory/"
+
+Conecté sur l'interface Glpi
+Configuration > Plugins  : installer puis activer glpi
+
+
+Step: regler le cron 
+ce rendre sur glpi 
+Configuration > Actions Automatiques 
+Chercher le plugin Taskscheduler, et "excecuter". 
+
+Step: Activer le cron dans sur le serveur 
+      le cron de l'utilisateur www-data pour la version php8.2
+Installation php et module
+#apt install php8.2-imagick
+#apt install php8.2-apcu
+#apt install php8.2-memcache
+#apt install php8.2-tidy
+#apt install php8.2-pspell
+#apt install php8.2-phpdbg
+#apt install php8.2-cgi
+#apt install libphp8.2-embed
+
+
+
+
+-------------------------------
+# sudo apt -y install php-{curl,zip,bz2,gd,imagick,intl,apcu,memcache,imap,mysql,cas,ldap,tidy,pear,xmlrpc,pspell,mbstring,json,iconv,xml,gd,xsl}
+-------------------------------
+
+#sudo nano /etc/php/*/apache2/php.ini
+-- rechercher et modifier la ligne comme ci dessous.
+session.cookie_httponly = on
+
+# crontab -u www-data -e
+→ Sélectionnez le choix 1, si vous êtes néophyte sur Linux. Un fichier s’ouvre.
+
+→ À la fin de celui-ci, ajoutez la ligne suivante et enregistrez ensuite :
+
+*/1 * * * * /usr/bin/php /var/www/html/glpi/front/cron.php &>/dev/null
+
+→ Une fois fini, on relance le daemon du cron :
+
+# /etc/init.d/cron restart
+
+consulter les taches dans le cron pour l'utilisateur www-data
+#crontab -l -u www-data
+
+Retournez ensuite sur la page web de GLPI et allez dans le menu : Configuration > Actions Automatiques.
+Dans la liste (souvent en page 2), cherchez l’action automatique nommée TaskScheduler 
+Cliquez dessus pour ouvrir le menu et cliquez ensuite sur le bouton [Exécuter].
+
+
+ Step: Fusion Inventory Agent sur le Client Windows 
+
+Step : Installation FusionInventory Agent windows 
+https://github.com/fusioninventory/fusioninventory-agent/releases/download/2.6/fusioninventory-agent_windows-x64_2.6.exe
+
+
+serveur: http://<localhost>/plugins/fusioninventory/
+
+Apres installation du plugin FusionInvenroty si l'inventaire ne fait pas automatiquement, excecuter manuellement le module Taskscheduler. 
+
+Check install
+http://localhost:62354
+
+
+
+Step: Install FusionInventory Agent on Ubuntu 22.04
+
+Installation of prerequisites 
+#sudo apt install dmidecode hwdata ucf hdparm perl libuniversal-require-perl libwww-perl libparse-edid-perl libproc-daemon-perl libfile-which-perl libhttp-daemon-perl libxml-treepp-perl libyaml-perl libnet-cups-perl libnet-ip-perl libdigest-sha-perl libsocket-getaddrinfo-perl libtext-template-perl libxml-xpath-perl libyaml-tiny-perl
+
+Installing the FusionInventory agent on Ubuntu
+#wget https://github.com/fusioninventory/fusioninventory-agent/releases/download/2.6/fusioninventory-agent_2.6-1_all.deb
+
+Configuring the FusionInventory agent
+#nano /etc/fusioninventory/agent.cfg
+Enter the below line
+-> server = http://server_ip/plugins/fusioninventory/
+for my config -> server = http://192.168.0.200/plugins/fusioninventory/
+
+Restart the agent service:
+#systemctl restart fusioninventory-agent
+
+If you want to force an inventory immediately enter the command below
+#pkill -USR1 -f -P 1 fusioninventory-agent
